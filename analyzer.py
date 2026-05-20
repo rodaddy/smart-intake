@@ -35,6 +35,7 @@ from prompts import (
 )
 
 load_dotenv()
+load_dotenv(".env.local", override=True)
 
 
 # ---------------------------------------------------------------------------
@@ -136,7 +137,17 @@ DEFAULT_FEE_SCHEDULE: dict[str, dict] = {
 
 
 def _get_claude_client():
-    """Get an Anthropic client if API key is available."""
+    """Get an AI client. Prefers LiteLLM (OpenAI-compatible), falls back to Anthropic."""
+    litellm_base = os.getenv("LITELLM_API_BASE", "")
+    litellm_key = os.getenv("LITELLM_API_KEY", "")
+    if litellm_base and litellm_key:
+        try:
+            from openai import OpenAI
+
+            return OpenAI(base_url=litellm_base, api_key=litellm_key)
+        except Exception:
+            pass
+
     api_key = os.getenv("ANTHROPIC_API_KEY", "")
     if not api_key or api_key.startswith("sk-ant-your"):
         return None
@@ -149,16 +160,27 @@ def _get_claude_client():
 
 
 def _call_claude(client, system_prompt: str, user_message: str) -> dict | None:
-    """Call Claude and parse the JSON response."""
+    """Call the AI model and parse the JSON response."""
     try:
-        response = client.messages.create(
-            model="claude-haiku-4-5",
-            max_tokens=2000,
-            system=system_prompt,
-            messages=[{"role": "user", "content": user_message}],
-        )
-        text = response.content[0].text.strip()
-        # Strip markdown fences if present
+        if hasattr(client, "chat"):
+            response = client.chat.completions.create(
+                model=os.getenv("LITELLM_MODEL", "haiku"),
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_message},
+                ],
+                max_tokens=2000,
+            )
+            text = response.choices[0].message.content.strip()
+        else:
+            response = client.messages.create(
+                model="claude-haiku-4-5",
+                max_tokens=2000,
+                system=system_prompt,
+                messages=[{"role": "user", "content": user_message}],
+            )
+            text = response.content[0].text.strip()
+
         if text.startswith("```"):
             text = re.sub(r"^```(?:json)?\s*", "", text)
             text = re.sub(r"\s*```$", "", text)

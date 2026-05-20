@@ -4,6 +4,8 @@
 
 The average small firm loses 30-40% of potential clients during intake -- not because the case is bad, but because the process is slow. Smart Intake automates conflict checks, matter classification, fee estimates, and engagement letter drafting so a new client goes from phone call to signed letter in minutes, not days.
 
+![Smart Intake — Full Pipeline](docs/screenshot.png)
+
 ---
 
 ## Real-World Example
@@ -11,6 +13,8 @@ The average small firm loses 30-40% of potential clients during intake -- not be
 We ran the sample intake through the tool -- a slip-and-fall plaintiff wanting to sue ShopRite. The firm already represents ShopRite in another matter. Here's what Smart Intake caught in **under 10 seconds:**
 
 ### Conflict Check
+
+![Conflict Check](docs/screenshot_conflict.png)
 
 | Check | Result |
 |-------|--------|
@@ -55,13 +59,16 @@ Pulled directly from the firm's own fee schedule CSV -- no guesswork.
 
 ```bash
 # Clone and install
-git clone https://github.com/rtech-digital/smart-intake.git
+git clone https://github.com/rodaddy/smart-intake.git
 cd smart-intake
 uv sync
 
 # Add your Anthropic API key (optional -- works without one)
 cp .env.example .env
 # Edit .env with your key
+
+# Or use an OpenAI-compatible proxy (LiteLLM, Azure, etc.)
+# LITELLM_API_BASE=http://your-proxy:4000/v1 LITELLM_API_KEY=sk-... uv run streamlit run app.py
 
 # Run the app
 uv run streamlit run app.py
@@ -92,8 +99,11 @@ See [`sample_data/README.md`](sample_data/README.md) for CSV column specs. The t
 | Component | Role |
 |-----------|------|
 | Streamlit | Web interface |
-| Claude (Anthropic SDK) | AI extraction and letter drafting |
+| Claude (Anthropic SDK) | AI extraction and letter drafting (direct) |
+| OpenAI SDK | AI via OpenAI-compatible proxy (LiteLLM, etc.) |
 | Pydantic | Structured data schemas |
+
+Supports two AI backends: direct Anthropic API key, or any OpenAI-compatible proxy (LiteLLM, Azure, etc.) via `LITELLM_API_BASE` and `LITELLM_API_KEY` env vars. Falls back to built-in heuristics if neither is configured.
 
 ## Project Structure
 
@@ -105,6 +115,7 @@ smart-intake/
   prompts.py          # Claude system prompts
   pyproject.toml      # Project config and dependencies
   sample_data/        # Sample intake form, client list, fee schedule
+  docs/               # Screenshots
 ```
 
 ## Requirements
